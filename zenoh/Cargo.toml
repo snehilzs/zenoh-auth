@@ -1,0 +1,114 @@
+#
+# Copyright (c) 2023 ZettaScale Technology
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
+# which is available at https://www.apache.org/licenses/LICENSE-2.0.
+#
+# SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+#
+# Contributors:
+#   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
+#
+[package]
+rust-version = { workspace = true }
+name = "zenoh"
+version = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+categories = { workspace = true }
+description = { workspace = true }
+readme = "../README.md"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+[features]
+auth_pubkey = ["zenoh-transport/auth_pubkey"]
+auth_usrpwd = ["zenoh-transport/auth_usrpwd"]
+complete_n = ["zenoh-codec/complete_n"]
+shared-memory = [
+    "zenoh-shm",
+    "zenoh-protocol/shared-memory",
+    "zenoh-transport/shared-memory",
+]
+stats = ["zenoh-transport/stats", "zenoh-protocol/stats"]
+transport_multilink = ["zenoh-transport/transport_multilink"]
+transport_quic = ["zenoh-transport/transport_quic"]
+transport_serial = ["zenoh-transport/transport_serial"]
+transport_unixpipe = ["zenoh-transport/transport_unixpipe"]
+transport_tcp = ["zenoh-transport/transport_tcp"]
+transport_tls = ["zenoh-transport/transport_tls"]
+transport_udp = ["zenoh-transport/transport_udp"]
+transport_unixsock-stream = ["zenoh-transport/transport_unixsock-stream"]
+transport_ws = ["zenoh-transport/transport_ws"]
+unstable = []
+default = [
+    "auth_pubkey",
+    "auth_usrpwd",
+    "transport_multilink",
+    "transport_quic",
+    "transport_tcp",
+    "transport_tls",
+    "transport_udp",
+    "transport_unixsock-stream",
+    "transport_ws",
+]
+
+[dependencies]
+async-global-executor = { workspace = true }
+async-std = { workspace = true, features = ["attributes"] }
+async-trait = { workspace = true }
+base64 = { workspace = true }
+env_logger = { workspace = true }
+event-listener = { workspace = true }
+flume = { workspace = true }
+form_urlencoded = { workspace = true }
+futures = { workspace = true }
+git-version = { workspace = true }
+hex = { workspace = true, features = ["default"] }
+lazy_static = { workspace = true }
+log = { workspace = true }
+ordered-float = { workspace = true }
+paste = { workspace = true }
+petgraph = { workspace = true }
+rand = { workspace = true, features = ["default"] }
+regex = { workspace = true }
+serde = { workspace = true, features = ["default"] }
+serde_json = { workspace = true }
+socket2 = { workspace = true }
+stop-token = { workspace = true }
+uhlc = { workspace = true, features = ["default"] }
+uuid = { workspace = true, features = ["default"] }
+vec_map = { workspace = true }
+zenoh-buffers = { workspace = true, features = ["std"] }
+zenoh-codec = { workspace = true }
+zenoh-collections = { workspace = true, features = ["std"] }
+zenoh-config = { workspace = true }
+zenoh-core = { workspace = true }
+zenoh-crypto = { workspace = true }
+zenoh-link = { workspace = true }
+zenoh-macros = { workspace = true }
+zenoh-plugin-trait = { workspace = true }
+zenoh-protocol = { workspace = true, features = ["std"] }
+zenoh-result = { workspace = true }
+zenoh-shm = { workspace = true, optional = true }
+zenoh-sync = { workspace = true }
+zenoh-transport = { workspace = true }
+zenoh-util = { workspace = true }
+
+[build-dependencies]
+rustc_version = { workspace = true }
+
+[lib]
+name = "zenoh"
+
+# For doc generation on docs.rs, activate the "unstable" feature to generate their documentation
+# NOTE: if you change this, also change it in .github/workflows/release.yml in "doc" job.
+[package.metadata.docs.rs]
+features = ["unstable"]
