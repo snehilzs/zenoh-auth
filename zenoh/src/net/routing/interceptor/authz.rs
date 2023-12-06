@@ -35,7 +35,7 @@ impl ZAuth for Enforcer {
 pub async fn start_authz() -> Result<Enforcer> {
     println!("testing casbin");
     println!("{}", std::env::current_dir().unwrap().display());
-    let mut e = Enforcer::new("keymatch_model.conf", "keymatch_policy.csv").await?;
+    let e = Enforcer::new("keymatch_model.conf", "keymatch_policy.csv").await?;
     // e.enable_log(true);
     Ok(e)
 }
