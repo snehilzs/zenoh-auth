@@ -27,6 +27,8 @@ async fn main() {
 
     let (config, key_expr) = parse_args();
 
+    println!("config is : {:?}", config.clone());
+
     println!("Opening session...");
     let session = zenoh::open(config).res().await.unwrap();
 

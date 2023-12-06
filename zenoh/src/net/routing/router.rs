@@ -142,6 +142,7 @@ impl Router {
         &self,
         transport: TransportUnicast,
     ) -> ZResult<Arc<LinkStateInterceptor>> {
+        println!("transport unicast");
         let ctrl_lock = zlock!(self.tables.ctrl_lock);
         let mut tables = zwrite!(self.tables.tables);
 
