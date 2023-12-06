@@ -136,9 +136,11 @@ impl InterceptTrait for IngressAclEnforcer {
                 if e.authz_testing(zid.to_string(), ke.to_owned(), act.to_owned())
                     .unwrap()
                 {
-                    println!("allowed");
+                    //allow the request
+                    println!("{} can {} on {}", zid, act, ke);
                 } else {
-                    println!("not allowed");
+                    // deny the request
+                    println!("{} cannot {} on {}", zid, act, ke);
                 }
             }
         }
@@ -167,9 +169,11 @@ impl InterceptTrait for EgressAclEnforcer {
                 if e.authz_testing(zid.to_string(), ke.to_owned(), act.to_owned())
                     .unwrap()
                 {
-                    println!("allowed");
+                    //allow the request
+                    println!("{} can {} on {}", zid, act, ke);
                 } else {
-                    println!("not allowed");
+                    // deny the request
+                    println!("{} cannot {} on {}", zid, act, ke);
                 }
             }
         }
