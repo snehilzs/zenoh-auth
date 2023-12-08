@@ -28,7 +28,13 @@ pub async fn start_authz() -> Result<Enforcer> {
     Ok(e)
 }
 
-pub async fn update_policy() {
+//adding management API features
+pub fn update_policy() {
+
+    //get policy and then send update
+}
+
+pub fn load_policy() {
 
     //get policy and then send update
 }

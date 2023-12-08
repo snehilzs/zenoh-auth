@@ -6,7 +6,7 @@
   /// that zenoh runtime will use.
   /// If not set, a random unsigned 128bit integer will be used.
   /// WARNING: this id must be unique in your zenoh network.
-  id: "abb3b411006ad57868988f9fec672a31",
+  id: "bbb3b411006ad57868988f9fec672a31",
   /// The node's mode (router, peer or client)
   mode: "client",
   /// The node's metadata (name, location, DNS name, etc.) Arbitrary JSON data not interpreted by zenohd and available in admin space @/router/<id>

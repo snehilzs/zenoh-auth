@@ -141,6 +141,7 @@ impl InterceptTrait for IngressAclEnforcer {
                 } else {
                     // deny the request
                     println!("{} cannot {} on {}", zid, act, ke);
+                    return None;
                 }
             }
         }
@@ -174,6 +175,7 @@ impl InterceptTrait for EgressAclEnforcer {
                 } else {
                     // deny the request
                     println!("{} cannot {} on {}", zid, act, ke);
+                    return None;
                 }
             }
         }
