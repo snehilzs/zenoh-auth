@@ -1,0 +1,5 @@
+p, aaa3b411006ad57868988f9fec672a31, demo/example/*, PUT, allow
+p, aaa3b411006ad57868988f9fec672a31, demo/example/mypub, PUT, allow
+p, bbb3b411006ad57868988f9fec672a31, demo/example/onlysub, PUT, allow
+p, bbb3b411006ad57868988f9fec672a31, demo/example/*, GET, allow
+p, aaabbb11006ad57868988f9fec672a31, demo/*, (GET)|(PUT), allow

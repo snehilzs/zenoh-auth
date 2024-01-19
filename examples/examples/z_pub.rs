@@ -24,11 +24,14 @@ async fn main() {
 
     let (config, key_expr, value) = parse_args();
 
+    println!("config is : {:?}", config.clone());
     println!("Opening session...");
     let session = zenoh::open(config).res().await.unwrap();
 
     println!("Declaring Publisher on '{key_expr}'...");
     let publisher = session.declare_publisher(&key_expr).res().await.unwrap();
+
+    //check my zid
 
     for idx in 0..u32::MAX {
         sleep(Duration::from_secs(1)).await;
@@ -52,7 +55,7 @@ fn parse_args() -> (Config, String, String) {
         ))
         .arg(
             Arg::from_usage("-k, --key=[KEYEXPR]        'The key expression to publish onto.'")
-                .default_value("demo/example/zenoh-rs-pub"),
+                .default_value("demo/example/mypub"),
         )
         .arg(
             Arg::from_usage("-v, --value=[VALUE]      'The value to publish.'")

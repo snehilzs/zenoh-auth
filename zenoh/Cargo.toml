@@ -61,6 +61,13 @@ default = [
 ]
 
 [dependencies]
+casbin = { version = "2.1.0", default-features = false, features = [
+    "runtime-async-std",
+    "logging",
+    "incremental",
+] }
+tokio = { workspace = true, features = ["full"] }
+
 async-global-executor = { workspace = true }
 async-std = { workspace = true, features = ["attributes"] }
 async-trait = { workspace = true }

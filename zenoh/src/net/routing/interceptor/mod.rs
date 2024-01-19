@@ -17,10 +17,14 @@
 //! This module is intended for Zenoh's internal use.
 //!
 //! [Click here for Zenoh's documentation](../zenoh/index.html)
-use super::RoutingContext;
-use zenoh_protocol::network::NetworkMessage;
-use zenoh_transport::{TransportMulticast, TransportUnicast};
+use crate::net::routing::interceptor::authz::ZAuth;
 
+use super::RoutingContext;
+//use zenoh_config::WhatAmI;
+use zenoh_protocol::network::{NetworkBody, NetworkMessage};
+use zenoh_transport::{TransportMulticast, TransportUnicast};
+mod authz;
+//use crate::net::routing::;
 pub(crate) trait InterceptTrait {
     fn intercept(
         &self,
@@ -45,8 +49,11 @@ pub(crate) type Interceptor = Box<dyn InterceptorTrait + Send + Sync>;
 
 pub(crate) fn interceptors() -> Vec<Interceptor> {
     // Add interceptors here
+    println!("interceptor setting up the session");
+    vec![Box::new(AclEnforcer {})]
     // vec![Box::new(LoggerInterceptor {})]
-    vec![]
+
+    //vec![]
 }
 
 pub(crate) struct InterceptsChain {
@@ -73,7 +80,9 @@ impl InterceptTrait for InterceptsChain {
     ) -> Option<RoutingContext<NetworkMessage>> {
         for intercept in &self.intercepts {
             match intercept.intercept(ctx) {
-                Some(newctx) => ctx = newctx,
+                Some(newctx) => {
+                    ctx = newctx;
+                }
                 None => {
                     log::trace!("Msg intercepted!");
                     return None;
@@ -84,57 +93,95 @@ impl InterceptTrait for InterceptsChain {
     }
 }
 
-pub(crate) struct IngressMsgLogger {}
+pub(crate) struct AclEnforcer {}
 
-impl InterceptTrait for IngressMsgLogger {
-    fn intercept(
-        &self,
-        ctx: RoutingContext<NetworkMessage>,
-    ) -> Option<RoutingContext<NetworkMessage>> {
-        log::debug!(
-            "Recv {} {} Expr:{:?}",
-            ctx.inface()
-                .map(|f| f.to_string())
-                .unwrap_or("None".to_string()),
-            ctx.msg,
-            ctx.full_expr(),
-        );
-        Some(ctx)
-    }
-}
-pub(crate) struct EgressMsgLogger {}
-
-impl InterceptTrait for EgressMsgLogger {
-    fn intercept(
-        &self,
-        ctx: RoutingContext<NetworkMessage>,
-    ) -> Option<RoutingContext<NetworkMessage>> {
-        log::debug!("Send {} Expr:{:?}", ctx.msg, ctx.full_expr());
-        Some(ctx)
-    }
-}
-
-pub(crate) struct LoggerInterceptor {}
-
-impl InterceptorTrait for LoggerInterceptor {
+impl InterceptorTrait for AclEnforcer {
     fn new_transport_unicast(
         &self,
         transport: &TransportUnicast,
     ) -> (Option<IngressIntercept>, Option<EgressIntercept>) {
-        log::debug!("New transport unicast {:?}", transport);
+        let usr = transport.get_zid();
         (
-            Some(Box::new(IngressMsgLogger {})),
-            Some(Box::new(EgressMsgLogger {})),
+            Some(Box::new(IngressAclEnforcer {})),
+            Some(Box::new(EgressAclEnforcer {
+                zid: usr.unwrap().to_string(),
+            })),
         )
     }
 
-    fn new_transport_multicast(&self, transport: &TransportMulticast) -> Option<EgressIntercept> {
-        log::debug!("New transport multicast {:?}", transport);
-        Some(Box::new(EgressMsgLogger {}))
+    fn new_transport_multicast(&self, _transport: &TransportMulticast) -> Option<EgressIntercept> {
+        Some(Box::new(IngressAclEnforcer {}))
     }
 
-    fn new_peer_multicast(&self, transport: &TransportMulticast) -> Option<IngressIntercept> {
-        log::debug!("New peer multicast {:?}", transport);
-        Some(Box::new(IngressMsgLogger {}))
+    fn new_peer_multicast(&self, _transport: &TransportMulticast) -> Option<IngressIntercept> {
+        Some(Box::new(IngressAclEnforcer {}))
+    }
+}
+
+pub(crate) struct IngressAclEnforcer {}
+
+impl InterceptTrait for IngressAclEnforcer {
+    fn intercept(
+        &self,
+        ctx: RoutingContext<NetworkMessage>,
+    ) -> Option<RoutingContext<NetworkMessage>> {
+        let e = async_std::task::block_on(async { authz::start_authz().await.unwrap() });
+
+        //how to get enforcer here without
+
+        if let NetworkBody::Push(push) = ctx.msg.body.clone() {
+            if let zenoh_protocol::zenoh::PushBody::Put(_put) = push.payload {
+                //get zid, keyexp and action and then check for permissions
+                let ke = ctx.full_expr().unwrap();
+                let zid = ctx.inface().unwrap().state.zid;
+                let act = "PUT";
+                if e.authz_testing(zid.to_string(), ke.to_owned(), act.to_owned())
+                    .unwrap()
+                {
+                    //allow the request
+                    println!("{} can {} on {}", zid, act, ke);
+                } else {
+                    // deny the request
+                    println!("{} cannot {} on {}", zid, act, ke);
+                    return None;
+                }
+            }
+        }
+
+        Some(ctx)
+    }
+}
+
+pub(crate) struct EgressAclEnforcer {
+    zid: String,
+}
+
+impl InterceptTrait for EgressAclEnforcer {
+    fn intercept(
+        &self,
+        ctx: RoutingContext<NetworkMessage>,
+    ) -> Option<RoutingContext<NetworkMessage>> {
+        let e = async_std::task::block_on(async { authz::start_authz().await.unwrap() });
+
+        if let NetworkBody::Push(push) = ctx.msg.body.clone() {
+            if let zenoh_protocol::zenoh::PushBody::Put(_put) = push.payload {
+                //get zid, ke and action and then check for permissions
+                let ke = ctx.full_expr().unwrap();
+                let zid = &self.zid;
+                let act = "GET";
+                if e.authz_testing(zid.to_string(), ke.to_owned(), act.to_owned())
+                    .unwrap()
+                {
+                    //allow the request
+                    println!("{} can {} on {}", zid, act, ke);
+                } else {
+                    // deny the request
+                    println!("{} cannot {} on {}", zid, act, ke);
+                    return None;
+                }
+            }
+        }
+
+        Some(ctx)
     }
 }

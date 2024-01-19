@@ -178,7 +178,12 @@ impl Resource {
 
     pub fn expr(&self) -> String {
         match &self.parent {
-            Some(parent) => parent.expr() + &self.suffix,
+            // Some(parent) => parent.expr() + &self.suffix,
+            Some(parent) => {
+                let mut x = parent.expr().clone();
+                x.push_str(&self.suffix);
+                x
+            }
             None => String::from(""),
         }
     }
