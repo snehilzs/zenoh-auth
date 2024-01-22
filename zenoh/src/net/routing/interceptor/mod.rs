@@ -128,6 +128,7 @@ impl InterceptTrait for IngressAclEnforcer {
         let e = async_std::task::block_on(async { authz::start_authz().await.unwrap() });
 
         //how to get enforcer here without
+        //pass code to PEP
 
         if let NetworkBody::Push(push) = ctx.msg.body.clone() {
             if let zenoh_protocol::zenoh::PushBody::Put(_put) = push.payload {
@@ -138,10 +139,10 @@ impl InterceptTrait for IngressAclEnforcer {
                 if e.authz_testing(zid.to_string(), ke.to_owned(), act.to_owned())
                     .unwrap()
                 {
-                    //allow the request
+                    //allowed the request
                     println!("{} can {} on {}", zid, act, ke);
                 } else {
-                    // deny the request
+                    // denied the request
                     println!("{} cannot {} on {}", zid, act, ke);
                     return None;
                 }
@@ -172,10 +173,10 @@ impl InterceptTrait for EgressAclEnforcer {
                 if e.authz_testing(zid.to_string(), ke.to_owned(), act.to_owned())
                     .unwrap()
                 {
-                    //allow the request
+                    //allowed the request
                     println!("{} can {} on {}", zid, act, ke);
                 } else {
-                    // deny the request
+                    // denyied the request
                     println!("{} cannot {} on {}", zid, act, ke);
                     return None;
                 }

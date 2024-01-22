@@ -21,19 +21,17 @@ impl ZAuth for Enforcer {
     }
 }
 
+pub async fn policy_enforcement_point() {}
+
+pub async fn policy_decision_point() {}
+
+pub async fn policy_resource_point() {
+    //add management API features here
+    //loading policy from file/network etc
+}
 pub async fn start_authz() -> Result<Enforcer> {
-    let e = Enforcer::new("keymatch_model.conf", "keymatch_policy.csv").await?;
-    // e.enable_log(true);
+    // get file value
+    let mut e = Enforcer::new("keymatch_model.conf", "keymatch_policy.csv").await?;
+    e.enable_log(true);
     Ok(e)
-}
-
-//adding management API features
-pub fn update_policy() {
-
-    //when file is changed, load new file into memoy
-}
-
-pub fn load_policy() {
-
-    //get policy from file and store in memory
 }
