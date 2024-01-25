@@ -17,7 +17,10 @@
 //! This module is intended for Zenoh's internal use.
 //!
 //! [Click here for Zenoh's documentation](../zenoh/index.html)
-use crate::net::routing::interceptor::authz::ZAuth;
+use crate::net::routing::interceptor::authz::{PolicyEnforcer, ZAuth};
+use casbin::prelude::*;
+
+use self::authz::Action;
 
 use super::RoutingContext;
 //use zenoh_config::WhatAmI;
@@ -48,12 +51,20 @@ pub(crate) trait InterceptorTrait {
 pub(crate) type Interceptor = Box<dyn InterceptorTrait + Send + Sync>;
 
 pub(crate) fn interceptors() -> Vec<Interceptor> {
-    // Add interceptors here
-    println!("interceptor setting up the session");
-    vec![Box::new(AclEnforcer {})]
-    // vec![Box::new(LoggerInterceptor {})]
+    /*
+       this is the singleton for interceptors
+       all init code for AC should be called here
+       example, for casbin we are using the enforecer init here
+       for in-built AC, we will load the policy rules here and also set the parameters (type of policy etc)
+    */
+    println!("the interceptor is initialized");
 
-    //vec![]
+    let policy_enforcer =
+        PolicyEnforcer::init_policy("pol_string".to_owned()).expect("enforcer not init");
+
+    //  let e = async_std::task::block_on(async { authz::start_authz().await.unwrap() });
+    //store the enforcer instance for use in rest of the sessions
+    vec![Box::new(AclEnforcer { e: policy_enforcer })]
 }
 
 pub(crate) struct InterceptsChain {
@@ -93,52 +104,66 @@ impl InterceptTrait for InterceptsChain {
     }
 }
 
-pub(crate) struct AclEnforcer {}
+pub(crate) struct AclEnforcer {
+    e: PolicyEnforcer,
+}
 
 impl InterceptorTrait for AclEnforcer {
     fn new_transport_unicast(
         &self,
         transport: &TransportUnicast,
     ) -> (Option<IngressIntercept>, Option<EgressIntercept>) {
+        let e = &self.e;
+        /* */
         let usr = transport.get_zid();
         (
-            Some(Box::new(IngressAclEnforcer {})),
+            Some(Box::new(IngressAclEnforcer { e: Some(e) })),
             Some(Box::new(EgressAclEnforcer {
                 zid: usr.unwrap().to_string(),
+                e: None,
             })),
         )
     }
 
     fn new_transport_multicast(&self, _transport: &TransportMulticast) -> Option<EgressIntercept> {
-        Some(Box::new(IngressAclEnforcer {}))
+        let e = &self.e;
+
+        Some(Box::new(IngressAclEnforcer { e: None }))
     }
 
     fn new_peer_multicast(&self, _transport: &TransportMulticast) -> Option<IngressIntercept> {
-        Some(Box::new(IngressAclEnforcer {}))
+        let e = &self.e;
+        Some(Box::new(IngressAclEnforcer { e: None }))
     }
 }
 
-pub(crate) struct IngressAclEnforcer {}
+pub(crate) struct IngressAclEnforcer {
+    e: Option<PolicyEnforcer>,
+}
 
 impl InterceptTrait for IngressAclEnforcer {
     fn intercept(
         &self,
         ctx: RoutingContext<NetworkMessage>,
     ) -> Option<RoutingContext<NetworkMessage>> {
-        let e = async_std::task::block_on(async { authz::start_authz().await.unwrap() });
+        // let e = async_std::task::block_on(async { authz::start_authz().await.unwrap() });
+        let e = self.e?; //.unwrap();
+                         //how to get enforcer here without
+                         //pass code to PEP
 
-        //how to get enforcer here without
-        //pass code to PEP
+        // println!("print ingress ctx body: {:?}", ctx.msg.body.clone());
+        //  println!("print push-payload: {:?}", ctx.msg.body.clone());
 
-        if let NetworkBody::Push(push) = ctx.msg.body.clone() {
+        //send msg to PEP
+
+        if let NetworkBody::Push(push) = ctx.msg.body {
             if let zenoh_protocol::zenoh::PushBody::Put(_put) = push.payload {
-                //get zid, keyexp and action and then check for permissions
+                let act = Action::WRITE;
+                let decision = e.policy_enforcement_point(ctx, act).unwrap();
+
                 let ke = ctx.full_expr().unwrap();
                 let zid = ctx.inface().unwrap().state.zid;
-                let act = "PUT";
-                if e.authz_testing(zid.to_string(), ke.to_owned(), act.to_owned())
-                    .unwrap()
-                {
+                if decision {
                     //allowed the request
                     println!("{} can {} on {}", zid, act, ke);
                 } else {
@@ -154,6 +179,7 @@ impl InterceptTrait for IngressAclEnforcer {
 }
 
 pub(crate) struct EgressAclEnforcer {
+    e: Option<PolicyEnforcer>,
     zid: String,
 }
 
@@ -162,7 +188,9 @@ impl InterceptTrait for EgressAclEnforcer {
         &self,
         ctx: RoutingContext<NetworkMessage>,
     ) -> Option<RoutingContext<NetworkMessage>> {
-        let e = async_std::task::block_on(async { authz::start_authz().await.unwrap() });
+        // let e = async_std::task::block_on(async { authz::start_authz().await.unwrap() });
+        println!("print egress ctx body: {:?}", ctx.msg.body.clone());
+        let e = self.e?;
 
         if let NetworkBody::Push(push) = ctx.msg.body.clone() {
             if let zenoh_protocol::zenoh::PushBody::Put(_put) = push.payload {
@@ -170,19 +198,18 @@ impl InterceptTrait for EgressAclEnforcer {
                 let ke = ctx.full_expr().unwrap();
                 let zid = &self.zid;
                 let act = "GET";
-                if e.authz_testing(zid.to_string(), ke.to_owned(), act.to_owned())
-                    .unwrap()
-                {
-                    //allowed the request
-                    println!("{} can {} on {}", zid, act, ke);
-                } else {
-                    // denyied the request
-                    println!("{} cannot {} on {}", zid, act, ke);
-                    return None;
-                }
+                // if e.authz_testing(zid.to_string(), ke.to_owned(), act.to_owned())
+                //     .unwrap()
+                // {
+                //     //allowed the request
+                //     println!("{} can {} on {}", zid, act, ke);
+                // } else {
+                //     // denyied the request
+                //     println!("{} cannot {} on {}", zid, act, ke);
+                //     return None;
+                // }
             }
         }
-
         Some(ctx)
     }
 }
